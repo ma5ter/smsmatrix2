@@ -1,0 +1,1 @@
+Initial release of SMS Matrix 2 with Matrix SDK2 integration, MMS support, and Jetpack Compose interface.

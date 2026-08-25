@@ -1,0 +1,27 @@
+Categories:
+  - Internet
+  - Phone & SMS
+
+License: GPL-3.0-only
+
+AuthorName: ma5ter
+SourceCode: https://github.com/ma5ter/smsmatrix2
+IssueTracker: https://github.com/ma5ter/smsmatrix2/issues
+
+AutoName: SMS Matrix 2
+
+RepoType: git
+Repo: https://github.com/ma5ter/smsmatrix2
+
+Builds:
+  - versionName: '0.1.0'
+    versionCode: 10
+    commit: v0.1.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '0.1.0'
+CurrentVersionCode: 10

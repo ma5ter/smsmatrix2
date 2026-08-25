@@ -1,0 +1,10 @@
+SMS Matrix 2 bridges native Android telephony (SMS, MMS, and call state events) directly to your Matrix account using matrix-android-sdk2.
+
+Key features:
+- Bi-directional text messaging: incoming SMS messages appear in dedicated Matrix direct rooms, and text replies sent in those rooms are dispatched as standard SMS.
+- MMS support: incoming multimedia parts (images, video, text) are automatically extracted and uploaded as attachments.
+- Call notifications: missed, ringing, answered, and ended call states are posted as notices to the contact room.
+- Contact synchronization: uses the Android contact book to name direct Matrix rooms and preserves custom room names.
+- Offline synchronization: scans unread SMS upon initialization, forwards them chronologically, and updates read flags.
+- Background persistence: runs as a foreground service with boot completion auto-start.
+- In-app diagnostics: live connection status display and rolling event log.
