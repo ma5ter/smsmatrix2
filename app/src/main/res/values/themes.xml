@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.SMSMatrix" parent="android:Theme.Material.NoActionBar" />
+</resources>

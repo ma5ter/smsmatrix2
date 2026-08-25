@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+    </style>
+
+    <style name="Base.TextAppearance.AppCompat.Subhead" />
+
+    <style name="Base.TextAppearance.AppCompat" />
+
+    <style name="Base.TextAppearance" />
+
+    <style name="Base" />
+
+
+</resources>
