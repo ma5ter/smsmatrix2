@@ -240,7 +240,7 @@ class MatrixHelper(
 			return@withLock existingRoom
 		}
 
-		if (type == MESSAGE_TYPE_NOTICE) {
+		if (type == MESSAGE_TYPE_NOTICE && !cleanPhone.equals("System", ignoreCase = true)) {
 			return@withLock null
 		}
 
@@ -249,11 +249,15 @@ class MatrixHelper(
 
 		saveRoomMapping(cleanPhone, roomId)
 
-		val contactName = getContactName(cleanPhone).trim()
-		val initialRoomName = if (contactName.isNotBlank() && !contactName.equals(botUsername, ignoreCase = true)) {
-			contactName
+		val initialRoomName = if (cleanPhone.equals("System", ignoreCase = true)) {
+			"System"
 		} else {
-			cleanPhone
+			val contactName = getContactName(cleanPhone).trim()
+			if (contactName.isNotBlank() && !contactName.equals(botUsername, ignoreCase = true)) {
+				contactName
+			} else {
+				cleanPhone
+			}
 		}
 
 		try {
@@ -266,6 +270,10 @@ class MatrixHelper(
 	}
 
 	private suspend fun updateRoomNameIfNeeded(room: Room, phoneNumber: String) {
+		if (phoneNumber.equals("System", ignoreCase = true)) {
+			return
+		}
+
 		val roomId = room.roomId
 		if (isRoomRenamed(roomId)) {
 			return
@@ -379,6 +387,8 @@ class MatrixHelper(
 
 		val room = s.roomService().getRoom(roomId) ?: return
 		val phoneNumber = room.roomSummary()?.topic?.takeIf { it.isNotBlank() } ?: roomPrefs.getString("room_$roomId", null) ?: return
+
+		if (phoneNumber.equals("System", ignoreCase = true)) return
 
 		val smsManager = getSmsManager()
 

@@ -15,6 +15,7 @@ import androidx.core.app.ServiceCompat
 class MatrixService : Service() {
 	private var mx: MatrixHelper? = null
 	private var mms: MMSMonitor? = null
+	private var batteryMonitor: BatteryMonitor? = null
 
 	override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 		startForegroundWithNotification()
@@ -72,6 +73,13 @@ class MatrixService : Service() {
 			}
 		}
 
+		if (batteryMonitor == null) {
+			batteryMonitor = BatteryMonitor(applicationContext).apply {
+				startBatteryMonitoring()
+				AppLogger.log("Battery Monitor active", LogLevel.INFO)
+			}
+		}
+
 		return START_STICKY
 	}
 
@@ -114,6 +122,8 @@ class MatrixService : Service() {
 		mx = null
 		mms?.stopMMSMonitoring()
 		mms = null
+		batteryMonitor?.stopBatteryMonitoring()
+		batteryMonitor = null
 		super.onDestroy()
 	}
 
