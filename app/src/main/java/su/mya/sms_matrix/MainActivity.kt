@@ -35,11 +35,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -61,6 +64,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -168,6 +172,9 @@ fun MainScreen(
 	val logs by AppLogger.logs.collectAsState()
 	val connectionStatus by AppLogger.connectionStatus.collectAsState()
 	val statusMessage by AppLogger.statusMessage.collectAsState()
+	val verificationState by VerificationStateBus.state.collectAsState()
+
+	VerificationDialog(state = verificationState)
 
 	Scaffold(topBar = {
 		TopAppBar(
@@ -228,6 +235,7 @@ fun SettingsSpoiler(
 	var syncDelay by remember { mutableStateOf(initialSyncDelay) }
 	var syncTimeout by remember { mutableStateOf(initialSyncTimeout) }
 
+	val isVerified by VerificationStateBus.isVerified.collectAsState()
 	val arrowRotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "arrow")
 	val spoilerScrollState = rememberScrollState()
 
@@ -326,6 +334,20 @@ fun SettingsSpoiler(
 							modifier = Modifier.weight(1f),
 							singleLine = true
 						)
+					}
+
+					OutlinedButton(
+						onClick = { VerificationStateBus.requestVerification() },
+						modifier = Modifier.fillMaxWidth()
+					) {
+						Text(if (isVerified) "Device Verified (In-Chat SAS)" else "Verify Device (In-Chat SAS)")
+					}
+
+					OutlinedButton(
+						onClick = { VerificationStateBus.requestLegacyVerification() },
+						modifier = Modifier.fillMaxWidth()
+					) {
+						Text("Verify Device (Legacy To-Device SAS)")
 					}
 
 					Button(
@@ -473,6 +495,114 @@ fun ConnectionStatusBar(status: ConnectionStatus, message: String) {
 					text = message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
 				)
 			}
+		}
+	}
+}
+
+/**
+ * Modal dialog coordinating the interactive SAS emoji verification flow.
+ */
+@Composable
+fun VerificationDialog(state: VerificationState) {
+	when (state) {
+		is VerificationState.Idle -> Unit
+		is VerificationState.WaitingForPartner -> {
+			AlertDialog(
+				onDismissRequest = { VerificationStateBus.cancelSas() },
+				title = { Text("Matrix SAS Verification") },
+				text = {
+					Column(
+						horizontalAlignment = Alignment.CenterHorizontally,
+						modifier = Modifier.fillMaxWidth()
+					) {
+						CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+						Text(
+							text = state.message,
+							style = MaterialTheme.typography.bodyMedium,
+							textAlign = TextAlign.Center
+						)
+					}
+				},
+				confirmButton = {},
+				dismissButton = {
+					TextButton(onClick = { VerificationStateBus.cancelSas() }) {
+						Text("Cancel")
+					}
+				}
+			)
+		}
+		is VerificationState.EmojisReceived -> {
+			AlertDialog(
+				onDismissRequest = { VerificationStateBus.cancelSas() },
+				title = { Text("Compare Emojis") },
+				text = {
+					Column(
+						horizontalAlignment = Alignment.CenterHorizontally,
+						modifier = Modifier.fillMaxWidth()
+					) {
+						Text(
+							text = "Verify that the emojis match those shown on your Matrix client in the same order:",
+							style = MaterialTheme.typography.bodySmall,
+							modifier = Modifier.padding(bottom = 12.dp)
+						)
+						state.emojis.chunked(4).forEach { rowEmojis ->
+							Row(
+								modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+								horizontalArrangement = Arrangement.SpaceEvenly
+							) {
+								for (item in rowEmojis) {
+									Column(
+										horizontalAlignment = Alignment.CenterHorizontally,
+										modifier = Modifier.weight(1f)
+									) {
+										Text(text = item.emoji, fontSize = 28.sp)
+										Text(
+											text = item.name,
+											style = MaterialTheme.typography.labelSmall,
+											textAlign = TextAlign.Center,
+											maxLines = 1
+										)
+									}
+								}
+							}
+						}
+					}
+				},
+				confirmButton = {
+					Button(onClick = { VerificationStateBus.confirmSas() }) {
+						Text("They Match")
+					}
+				},
+				dismissButton = {
+					TextButton(onClick = { VerificationStateBus.cancelSas() }) {
+						Text("They Don't Match")
+					}
+				}
+			)
+		}
+		is VerificationState.Success -> {
+			AlertDialog(
+				onDismissRequest = { VerificationStateBus.reset() },
+				title = { Text("Verification Complete") },
+				text = { Text(state.message) },
+				confirmButton = {
+					Button(onClick = { VerificationStateBus.reset() }) {
+						Text("OK")
+					}
+				}
+			)
+		}
+		is VerificationState.Error -> {
+			AlertDialog(
+				onDismissRequest = { VerificationStateBus.reset() },
+				title = { Text("Verification Failed") },
+				text = { Text(state.reason) },
+				confirmButton = {
+					Button(onClick = { VerificationStateBus.reset() }) {
+						Text("Dismiss")
+					}
+				}
+			)
 		}
 	}
 }

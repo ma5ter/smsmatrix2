@@ -7,7 +7,6 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -37,9 +36,7 @@ class MatrixService : Service() {
 				botUsername = botUsername,
 				botPassword = botPassword,
 				realUserId = username,
-				deviceName = if (device.isEmpty()) "SmsBridge" else device,
-				syncDelay = syncDelay,
-				syncTimeout = syncTimeout
+				deviceName = if (device.isEmpty()) "SmsBridge" else device
 			)
 		}
 
