@@ -54,6 +54,15 @@ android {
 	buildFeatures {
 		compose = true
 	}
+
+	packaging {
+		jniLibs {
+			keepDebugSymbols += listOf(
+				"**/libmatrix_sdk_crypto_ffi.so",
+				"**/libjnidispatch.so"
+			)
+		}
+	}
 }
 
 kotlin {
