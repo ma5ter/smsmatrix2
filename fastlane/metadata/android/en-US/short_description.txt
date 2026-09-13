@@ -1,1 +1,1 @@
-Bridge SMS, MMS, and call notifications to Matrix rooms via Android background service.
+Bridge SMS, MMS, and call notifications to Matrix rooms.

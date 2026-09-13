@@ -35,6 +35,7 @@ import org.matrix.android.sdk.api.session.crypto.verification.VerificationTransa
 import org.matrix.android.sdk.api.session.events.model.Event
 import org.matrix.android.sdk.api.session.events.model.EventType
 import org.matrix.android.sdk.api.session.room.Room
+import org.matrix.android.sdk.api.session.room.model.create.CreateRoomParams
 import org.matrix.android.sdk.api.session.room.RoomSummaryQueryParams
 import org.matrix.android.sdk.api.session.room.model.Membership
 import org.matrix.android.sdk.api.session.room.model.RoomSummary
@@ -101,6 +102,8 @@ class MatrixHelper(
 			val sent = sendTextMessageDirect(phoneNumber, body, type)
 			if (!sent) {
 				pendingMessages.add(NotSendMesage(phoneNumber, body, type))
+			} else {
+				AppLogger.log("Forwarded message to Matrix ($phoneNumber)", LogLevel.SUCCESS)
 			}
 		}
 	}
@@ -459,6 +462,10 @@ class MatrixHelper(
 							}
 						}
 					}
+
+					if (pendingMessages.isNotEmpty()) {
+						flushPendingMessages()
+					}
 				}
 			} catch (e: Exception) {
 				Log.e(TAG, "Sync stream collection failed", e)
@@ -502,30 +509,7 @@ class MatrixHelper(
 			return@withLock null
 		}
 
-		val roomId = if (isSystem) {
-			findHealthyDirectRoomId(s, realUserId, excludeRoomId)
-				?: s.roomService().createDirectRoom(realUserId)
-		} else {
-			s.roomService().createDirectRoom(realUserId)
-		}
-		saveRoomMapping(cleanPhone, roomId)
-
-		var room = s.roomService().getRoom(roomId)
-		if (room == null) {
-			withTimeoutOrNull(5000L.milliseconds) {
-				while (room == null && isActive) {
-					delay(200.milliseconds)
-					room = s.roomService().getRoom(roomId)
-				}
-			}
-		}
-		val targetRoom = room ?: run {
-			Log.w(TAG, "Room $roomId created but summary not yet available in local store")
-			return@withLock null
-		}
-
-		saveRoomMapping(cleanPhone, roomId)
-
+		val savedRoomId = getSavedRoomIdForPhone(cleanPhone)
 		val initialRoomName = if (isSystem) {
 			"$botUsername System"
 		} else {
@@ -535,6 +519,43 @@ class MatrixHelper(
 			} else {
 				cleanPhone
 			}
+		}
+
+		val roomId = if (!savedRoomId.isNullOrEmpty() &&
+			savedRoomId != excludeRoomId &&
+			!deadRoomIds.contains(savedRoomId)
+		) {
+			savedRoomId
+		} else {
+			val createParams = CreateRoomParams().apply {
+				name = initialRoomName
+				topic = cleanPhone
+				invitedUserIds.add(realUserId)
+				isDirect = true
+			}
+			val newRoomId = if (isSystem) {
+				findHealthyDirectRoomId(s, realUserId, excludeRoomId)
+					?: s.roomService().createRoom(createParams)
+			} else {
+				s.roomService().createRoom(createParams)
+			}
+			saveRoomMapping(cleanPhone, newRoomId)
+			AppLogger.log("Created and saved room mapping for $cleanPhone -> $newRoomId", LogLevel.INFO)
+			newRoomId
+		}
+
+		var room = s.roomService().getRoom(roomId)
+		if (room == null) {
+			withTimeoutOrNull(30000L.milliseconds) {
+				while (room == null && isActive) {
+					delay(200.milliseconds)
+					room = s.roomService().getRoom(roomId)
+				}
+			}
+		}
+		val targetRoom = room ?: run {
+			Log.w(TAG, "Room $roomId mapping saved in settings db, but summary not yet available in local store")
+			return@withLock null
 		}
 
 		runCatching {
@@ -584,17 +605,9 @@ class MatrixHelper(
 	 */
 	private suspend fun ensureSystemRoomAndNotifyReady(s: Session) {
 		try {
-			var room = getOrCreateRoomForPhone(s, SYSTEM_PHONE_NUMBER, MESSAGE_TYPE_TEXT)
+			val room = getOrCreateRoomForPhone(s, SYSTEM_PHONE_NUMBER, MESSAGE_TYPE_TEXT)
 			if (room == null) {
-				// Force purge any stale mapping and retry once
-				val staleId = getSavedRoomIdForPhone(SYSTEM_PHONE_NUMBER)
-				if (!staleId.isNullOrEmpty()) {
-					handleDeletedRoom(s, SYSTEM_PHONE_NUMBER, staleId)
-				}
-				room = getOrCreateRoomForPhone(s, SYSTEM_PHONE_NUMBER, MESSAGE_TYPE_TEXT)
-			}
-			if (room == null) {
-				AppLogger.log("Could not obtain or recreate System room", LogLevel.ERROR)
+				AppLogger.log("System room mapping saved; waiting for local sync", LogLevel.INFO)
 				return
 			}
 			sendMessageToRoom(room, "System ready", MESSAGE_TYPE_TEXT)
@@ -636,11 +649,17 @@ class MatrixHelper(
 				return null
 			}
 			val room = s.roomService().getRoom(savedRoomId)
-			val membership = room?.roomSummary()?.membership
-			if (room != null && (membership == Membership.JOIN || membership == null)) {
+			if (room != null) {
+				val membership = room.roomSummary()?.membership
+				if (membership == Membership.LEAVE || membership == Membership.BAN) {
+					removeRoomMapping(cleanNumber, savedRoomId)
+					return null
+				}
 				return room
 			}
-			removeRoomMapping(cleanNumber, savedRoomId)
+			// Room mapping exists in settings DB but local session sync has not finished caching it.
+			// Retain the mapping so it is not recreated.
+			return null
 		}
 
 		val query = RoomSummaryQueryParams.Builder().apply {

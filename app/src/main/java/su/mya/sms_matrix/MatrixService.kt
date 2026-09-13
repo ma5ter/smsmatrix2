@@ -49,7 +49,6 @@ class MatrixService : Service() {
 					val body = intent.getStringExtra("SendSms_body")
 					if (body != null) {
 						mx?.sendMessage(phone, body, type)
-						AppLogger.log("Forwarded message to Matrix ($phone)", LogLevel.SUCCESS)
 					}
 				} else if (type == MatrixHelper.MESSAGE_TYPE_IMAGE || type == MatrixHelper.MESSAGE_TYPE_VIDEO) {
 					val body = intent.getByteArrayExtra("SendSms_body")
@@ -57,7 +56,6 @@ class MatrixService : Service() {
 					val contentType = intent.getStringExtra("SendSms_contentType")
 					if (body != null && fileName != null && contentType != null) {
 						mx?.sendFile(phone, body, type, fileName, contentType)
-						AppLogger.log("Forwarded media file to Matrix ($fileName)", LogLevel.SUCCESS)
 					}
 				}
 			}
