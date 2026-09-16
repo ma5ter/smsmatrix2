@@ -15,7 +15,7 @@ Binaries: https://github.com/ma5ter/smsmatrix2/releases/download/v%v/app-release
 Builds:
   - versionName: 0.2.2
     versionCode: 20
-    commit: 640e469e0cc7760ccafa651ac7237fd48bc8f23e
+    commit: 4cca2027c4fcd2e9eaef93f3e1f56155871a5b55
     subdir: app
     gradle:
       - yes
