@@ -16,6 +16,10 @@ android {
 		versionCode = 20
 		versionName = "0.2.0"
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+		ndk {
+			abiFilters.clear()
+			abiFilters.addAll(listOf("arm64-v8a"))
+		}
 	}
 
 	dependenciesInfo {
