@@ -8,11 +8,13 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-    repositories {
+    @Suppress("UnstableApiUsage")
+	repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+	@Suppress("UnstableApiUsage")
+	repositories {
 		google()
         mavenCentral()
-		maven { url = uri("https://jitpack.io") }
+        maven("https://jitpack.io")
     }
 }
 

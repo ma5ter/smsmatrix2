@@ -1,0 +1,1 @@
+End-to-end encryption enabled for per-contact rooms, call notification support via READ_CALL_LOG, Android 15 boot service compatibility, and security hardening.

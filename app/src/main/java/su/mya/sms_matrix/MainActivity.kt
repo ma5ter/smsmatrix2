@@ -34,8 +34,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,9 +64,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -92,6 +92,15 @@ class MainActivity : ComponentActivity() {
 							startMatrixService()
 						} else {
 							AppLogger.log("Required permissions not granted", LogLevel.WARNING)
+							AppLogger.setConnectionStatus(ConnectionStatus.DISCONNECTED, "Permissions not granted")
+						}
+					}
+
+					LaunchedEffect(Unit) {
+						if (hasRequiredPermissions()) {
+							startMatrixService()
+						} else {
+							permissionsLauncher.launch(getRequiredPermissions())
 						}
 					}
 
@@ -110,17 +119,13 @@ class MainActivity : ComponentActivity() {
 							AppLogger.log("Settings saved", LogLevel.INFO)
 
 							if (hasRequiredPermissions()) {
-								startMatrixService()
+								startMatrixService(restart = true)
 							} else {
 								permissionsLauncher.launch(getRequiredPermissions())
 							}
 						})
 				}
 			}
-		}
-
-		if (hasRequiredPermissions()) {
-			startMatrixService()
 		}
 	}
 
@@ -136,6 +141,7 @@ class MainActivity : ComponentActivity() {
 			Manifest.permission.SEND_SMS,
 			Manifest.permission.RECEIVE_SMS,
 			Manifest.permission.READ_PHONE_STATE,
+			Manifest.permission.READ_CALL_LOG,
 			Manifest.permission.READ_CONTACTS
 		)
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -144,8 +150,10 @@ class MainActivity : ComponentActivity() {
 		return permissions.toTypedArray()
 	}
 
-	private fun startMatrixService() {
-		val intent = Intent(this, MatrixService::class.java)
+	private fun startMatrixService(restart: Boolean = false) {
+		val intent = Intent(this, MatrixService::class.java).apply {
+			if (restart) putExtra("restart", true)
+		}
 		ContextCompat.startForegroundService(this, intent)
 	}
 
@@ -243,10 +251,11 @@ fun SettingsSpoiler(
 		modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
 	) {
 		Column(modifier = Modifier.fillMaxWidth()) {
-			Row(modifier = Modifier
-				.fillMaxWidth()
-				.clickable { expanded = !expanded }
-				.padding(horizontal = 16.dp, vertical = 14.dp),
+			Row(
+				modifier = Modifier
+					.fillMaxWidth()
+					.clickable { expanded = !expanded }
+					.padding(horizontal = 16.dp, vertical = 14.dp),
 				verticalAlignment = Alignment.CenterVertically,
 				horizontalArrangement = Arrangement.SpaceBetween) {
 				Text(
@@ -531,6 +540,7 @@ fun VerificationDialog(state: VerificationState) {
 				}
 			)
 		}
+
 		is VerificationState.EmojisReceived -> {
 			AlertDialog(
 				onDismissRequest = { VerificationStateBus.cancelSas() },
@@ -547,7 +557,9 @@ fun VerificationDialog(state: VerificationState) {
 						)
 						state.emojis.chunked(4).forEach { rowEmojis ->
 							Row(
-								modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+								modifier = Modifier
+									.fillMaxWidth()
+									.padding(vertical = 4.dp),
 								horizontalArrangement = Arrangement.SpaceEvenly
 							) {
 								for (item in rowEmojis) {
@@ -580,6 +592,7 @@ fun VerificationDialog(state: VerificationState) {
 				}
 			)
 		}
+
 		is VerificationState.Success -> {
 			AlertDialog(
 				onDismissRequest = { VerificationStateBus.reset() },
@@ -592,6 +605,7 @@ fun VerificationDialog(state: VerificationState) {
 				}
 			)
 		}
+
 		is VerificationState.Error -> {
 			AlertDialog(
 				onDismissRequest = { VerificationStateBus.reset() },

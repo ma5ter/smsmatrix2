@@ -452,7 +452,20 @@ class MatrixHelper(
 					}
 
 					val invitedRooms = syncResponse.rooms?.invite ?: emptyMap()
-					for ((roomId, _) in invitedRooms) {
+					for ((roomId, invitedRoom) in invitedRooms) {
+						val inviter = invitedRoom.inviteState?.events
+							?.firstOrNull {
+								it.type == EventType.STATE_ROOM_MEMBER &&
+										it.stateKey == activeSession.myUserId
+							}
+							?.senderId
+						if (inviter == null || !isMatchingUserId(inviter)) {
+							AppLogger.log(
+								"Ignored invite to $roomId from untrusted sender $inviter",
+								LogLevel.WARNING
+							)
+							continue
+						}
 						scope.launch {
 							try {
 								activeSession.roomService().joinRoom(roomId)
@@ -532,6 +545,7 @@ class MatrixHelper(
 				topic = cleanPhone
 				invitedUserIds.add(realUserId)
 				isDirect = true
+				enableEncryption()
 			}
 			val newRoomId = if (isSystem) {
 				findHealthyDirectRoomId(s, realUserId, excludeRoomId)

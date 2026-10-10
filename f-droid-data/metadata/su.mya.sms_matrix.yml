@@ -13,9 +13,9 @@ Repo: https://github.com/ma5ter/smsmatrix2
 Binaries: https://github.com/ma5ter/smsmatrix2/releases/download/v%v/app-release.apk
 
 Builds:
-  - versionName: 0.2.2
-    versionCode: 20
-    commit: 4cca2027c4fcd2e9eaef93f3e1f56155871a5b55
+  - versionName: 0.3.0
+    versionCode: 30
+    commit: 541dd97f59698bd2284e52dc1b6dad27f351c68c
     subdir: app
     gradle:
       - yes
@@ -24,5 +24,5 @@ AllowedAPKSigningKeys: da231f5a42a8ab3c9ebfabd5735af353df5e15eb71b0178f6a9c77d15
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.2.2
-CurrentVersionCode: 20
+CurrentVersion: 0.3.0
+CurrentVersionCode: 30

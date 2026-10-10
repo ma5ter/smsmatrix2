@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -27,8 +28,15 @@ class MatrixService : Service() {
 		val hsUrl = sp.getString("hsUrl", "").orEmpty()
 		val syncDelay = sp.getString("syncDelay", "12").orEmpty()
 		val syncTimeout = sp.getString("syncTimeout", "30").orEmpty()
+		val shouldRestart = intent?.getBooleanExtra("restart", false) == true
 
-		if (mx == null && botUsername.isNotEmpty() && botPassword.isNotEmpty() && username.isNotEmpty() && hsUrl.isNotEmpty()) {
+		if (botUsername.isEmpty() || botPassword.isEmpty() || username.isEmpty() || hsUrl.isEmpty()) {
+			AppLogger.setConnectionStatus(ConnectionStatus.DISCONNECTED, "Settings not configured")
+			AppLogger.log("Matrix credentials not configured. Please configure in Settings.", LogLevel.WARNING)
+		} else if (mx == null || shouldRestart) {
+			if (shouldRestart) {
+				mx?.destroy()
+			}
 			AppLogger.log("Starting Matrix background bridge...", LogLevel.INFO)
 			mx = MatrixHelper(
 				context = applicationContext,
@@ -90,11 +98,18 @@ class MatrixService : Service() {
 			.setCategory(Notification.CATEGORY_SERVICE)
 			.build()
 
+		// Android 15+ forbids starting a `dataSync` FGS from BOOT_COMPLETED; use `specialUse` there.
+		val fgsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+			ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+		} else {
+			ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+		}
+
 		ServiceCompat.startForeground(
 			this,
 			NOTIFICATION_ID,
 			notification,
-			ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+			fgsType
 		)
 	}
 
